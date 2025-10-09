@@ -43,6 +43,11 @@ const Navbar = () => {
                 Catálogo
               </Button>
             </Link>
+            <Link to="/admin/inventory">
+              <Button variant="ghost" className="font-medium">
+                Admin
+              </Button>
+            </Link>
             <Link to="/favorites">
               <Button variant="ghost" size="icon" className="relative">
                 <Heart className="h-5 w-5" />
@@ -99,6 +104,11 @@ const Navbar = () => {
             <Link to="/catalog" onClick={() => setIsMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start font-medium">
                 Catálogo
+              </Button>
+            </Link>
+            <Link to="/admin/inventory" onClick={() => setIsMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start font-medium">
+                Admin
               </Button>
             </Link>
             <Link to="/favorites" onClick={() => setIsMenuOpen(false)}>
