@@ -71,7 +71,7 @@ const Index = () => {
           <div className="max-w-2xl animate-slide-up">
             <h1 className="text-5xl md:text-6xl font-serif font-bold mb-6 leading-tight">
               Dê nova vida aos
-              <span className="gradient-hero bg-clip-text text-transparent"> livros</span>
+              <span className="text-primary font-bold"> livros</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
               Encontre obras incríveis em ótimo estado e contribua para um futuro mais sustentável através da economia circular.
