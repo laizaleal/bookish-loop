@@ -5,7 +5,7 @@ import BookCard from "@/components/BookCard";
 import { Button } from "@/components/ui/button";
 import { Leaf, BookOpen, Users, TrendingUp, ArrowRight } from "lucide-react";
 
-import heroImage from "@/assets/hero-books.jpg";
+import heroImage from "@/assets/fundo-hero.png";
 import book1 from "@/assets/book1.jpg";
 import book2 from "@/assets/book2.jpg";
 import book3 from "@/assets/book3.jpg";
