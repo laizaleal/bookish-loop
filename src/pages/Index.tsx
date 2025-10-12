@@ -61,7 +61,7 @@ const Index = () => {
 
       {/* Hero Section */}
       <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/60 via-background/40 to-transparent z-10" />
         <img
           src={heroImage}
           alt="Livros vintage"
@@ -73,7 +73,7 @@ const Index = () => {
               Dê nova vida aos
               <span className="text-primary font-bold"> livros</span>
             </h1>
-            <p className="text-xl text-muted-foreground mb-8">
+            <p className="text-xl text-muted-foreground text-gray-700 mb-8">
               Encontre obras incríveis em ótimo estado e contribua para um futuro mais sustentável através da economia circular.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
