@@ -64,9 +64,11 @@ const Navbar = () => {
                 </span>
               </Button>
             </Link>
-            <Button className="bg-primary hover:bg-primary/90">
-              Entrar
-            </Button>
+            <Link to="/auth">
+              <Button className="bg-primary hover:bg-primary/90">
+                Entrar
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -124,9 +126,11 @@ const Navbar = () => {
               </Button>
             </Link>
             <div className="pt-3 border-t border-border">
-              <Button className="w-full bg-primary hover:bg-primary/90">
-                Entrar
-              </Button>
+              <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                <Button className="w-full bg-primary hover:bg-primary/90">
+                  Entrar
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

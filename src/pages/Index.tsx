@@ -3,7 +3,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BookCard from "@/components/BookCard";
 import { Button } from "@/components/ui/button";
-import { Leaf, BookOpen, Users, TrendingUp, ArrowRight } from "lucide-react";
+import { Leaf, BookOpen, Users, TrendingUp, ArrowRight, Search, ShoppingCart, Package } from "lucide-react";
 
 import heroImage from "@/assets/fundo-hero.png";
 import book1 from "@/assets/book1.jpg";
@@ -83,9 +83,11 @@ const Index = () => {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="text-lg px-8 bg-card/50 backdrop-blur-sm">
-                Como Funciona
-              </Button>
+              <a href="#como-funciona">
+                <Button size="lg" variant="outline" className="text-lg px-8 bg-card/50 backdrop-blur-sm">
+                  Como Funciona
+                </Button>
+              </a>
             </div>
           </div>
         </div>
@@ -146,6 +148,71 @@ const Index = () => {
         </div>
       </section>
 
+      {/* How It Works Section */}
+      <section id="como-funciona" className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 animate-fade-in">
+            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
+              Como Funciona?
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Comprar livros usados nunca foi tão fácil e seguro
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+            {[
+              {
+                icon: Search,
+                step: "1",
+                title: "Encontre seu Livro",
+                description: "Navegue pelo nosso catálogo com milhares de títulos organizados por categoria, autor e editora.",
+              },
+              {
+                icon: ShoppingCart,
+                step: "2",
+                title: "Adicione ao Carrinho",
+                description: "Escolha os livros desejados, verifique o estado de conservação e finalize sua compra com segurança.",
+              },
+              {
+                icon: Package,
+                step: "3",
+                title: "Receba em Casa",
+                description: "Seus livros são embalados com cuidado e enviados rapidamente para o conforto da sua casa.",
+              },
+            ].map((step, index) => (
+              <div
+                key={index}
+                className="relative text-center p-8 bg-card rounded-xl shadow-soft hover:shadow-hover transition-all animate-slide-up"
+                style={{ animationDelay: `${index * 0.15}s` }}
+              >
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">
+                  {step.step}
+                </div>
+                <div className="inline-flex p-5 bg-primary/10 rounded-full mb-6 mt-2">
+                  <step.icon className="h-10 w-10 text-primary" />
+                </div>
+                <h3 className="font-serif font-semibold text-xl mb-3">
+                  {step.title}
+                </h3>
+                <p className="text-muted-foreground">
+                  {step.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <Link to="/catalog">
+              <Button size="lg" className="bg-primary hover:bg-primary/90">
+                Começar Agora
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Featured Books */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -193,9 +260,11 @@ const Index = () => {
             <p className="text-muted-foreground mb-8 text-lg">
               Crie sua conta e ganhe 10% de desconto na primeira compra
             </p>
-            <Button size="lg" className="bg-accent hover:bg-accent/90 text-lg px-8">
-              Criar Conta Grátis
-            </Button>
+            <Link to="/auth">
+              <Button size="lg" className="bg-accent hover:bg-accent/90 text-lg px-8">
+                Criar Conta Grátis
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
