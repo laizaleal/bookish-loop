@@ -10,8 +10,10 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import AdminReports from "./pages/AdminReports";
 import AdminInventory from "./pages/AdminInventory";
-import Favorites from "./pages/Favorites"; // IMPORT ADICIONADO
+import Favorites from "./pages/Favorites";
+import Profile from "./pages/Profile"; // NOVO IMPORT
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -26,11 +28,38 @@ const App = () => (
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/favorites" element={<Favorites />} /> {/* ROTA ADICIONADA */}
-          <Route path="/admin" element={<Admin />}>
+          
+          {/* Rotas Protegidas */}
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/favorites" 
+            element={
+              <ProtectedRoute>
+                <Favorites />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute>
+                <Admin />
+              </ProtectedRoute>
+            }
+          >
             <Route path="reports" element={<AdminReports />} />
             <Route path="inventory" element={<AdminInventory />} />
           </Route>
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

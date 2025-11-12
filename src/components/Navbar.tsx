@@ -1,23 +1,30 @@
 // src/components/Navbar.tsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { BookOpen, Search, Heart, ShoppingCart, Menu, X } from "lucide-react";
+import { BookOpen, Search, Heart, ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/hooks/useCart";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { getItemCount } = useCart();
-  const { favoriteCount } = useFavorites(); // Removido refreshFavorites daqui
+  const { favoriteCount } = useFavorites();
+  const { user, isAuthenticated, logout } = useAuth();
   const cartItemCount = getItemCount();
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Remove o useEffect que causava loop
-  // Os contadores serão atualizados automaticamente pelos hooks
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +37,20 @@ const Navbar = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     handleSearch(e);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setIsMenuOpen(false);
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
+
+  const handleAdminClick = () => {
+    navigate('/admin/inventory');
+    setIsMenuOpen(false);
   };
 
   return (
@@ -75,11 +96,17 @@ const Navbar = () => {
                 Catálogo
               </Button>
             </Link>
-            <Link to="/admin/inventory">
-              <Button variant="ghost" className="font-medium">
-                Admin
-              </Button>
-            </Link>
+
+            {/* Admin Link - Sempre visível para simplificar */}
+            <Button 
+              variant="ghost" 
+              className="font-medium"
+              onClick={handleAdminClick}
+            >
+              Admin
+            </Button>
+
+            {/* Favoritos */}
             <Link to="/favorites">
               <Button variant="ghost" size="icon" className="relative">
                 <Heart className="h-5 w-5" />
@@ -90,6 +117,8 @@ const Navbar = () => {
                 )}
               </Button>
             </Link>
+
+            {/* Carrinho */}
             <Link to="/cart">
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="h-5 w-5" />
@@ -100,11 +129,60 @@ const Navbar = () => {
                 )}
               </Button>
             </Link>
-            <Link to="/auth">
-              <Button className="bg-primary hover:bg-primary/90">
-                Entrar
-              </Button>
-            </Link>
+
+            {/* Área do Usuário */}
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative">
+                    <User className="h-5 w-5 mr-2" />
+                    {user?.name}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user?.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="w-full cursor-pointer">
+                      <User className="h-4 w-4 mr-2" />
+                      Meu Perfil
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/favorites" className="w-full cursor-pointer">
+                      <Heart className="h-4 w-4 mr-2" />
+                      Meus Favoritos
+                      {favoriteCount > 0 && (
+                        <span className="ml-auto bg-accent text-accent-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {favoriteCount}
+                        </span>
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    className="text-destructive cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button className="bg-primary hover:bg-primary/90">
+                  Entrar
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -152,11 +230,15 @@ const Navbar = () => {
                 Catálogo
               </Button>
             </Link>
-            <Link to="/admin/inventory" onClick={() => setIsMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start font-medium">
-                Admin
-              </Button>
-            </Link>
+
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start font-medium"
+              onClick={handleAdminClick}
+            >
+              Admin
+            </Button>
+
             <Link to="/favorites" onClick={() => setIsMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start relative">
                 <Heart className="h-5 w-5 mr-2" />
@@ -168,6 +250,7 @@ const Navbar = () => {
                 )}
               </Button>
             </Link>
+
             <Link to="/cart" onClick={() => setIsMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start relative">
                 <ShoppingCart className="h-5 w-5 mr-2" />
@@ -179,13 +262,39 @@ const Navbar = () => {
                 )}
               </Button>
             </Link>
-            <div className="pt-3 border-t border-border">
-              <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                <Button className="w-full bg-primary hover:bg-primary/90">
-                  Entrar
-                </Button>
-              </Link>
-            </div>
+
+            {/* Área do Usuário - Mobile */}
+            {isAuthenticated ? (
+              <>
+                <div className="pt-3 border-t border-border">
+                  <div className="px-2 py-2 text-sm text-muted-foreground">
+                    Logado como: {user?.name}
+                  </div>
+                  <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start">
+                      <User className="h-4 w-4 mr-2" />
+                      Meu Perfil
+                    </Button>
+                  </Link>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-destructive"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sair
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="pt-3 border-t border-border">
+                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                  <Button className="w-full bg-primary hover:bg-primary/90">
+                    Entrar
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}
