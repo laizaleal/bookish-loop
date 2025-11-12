@@ -9,11 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Search, Pencil, Trash2, Package, Save, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useBooks } from "@/hooks/useBooks";
+import { useAdminBooks } from "@/hooks/useAdminBooks"; // MUDEI AQUI
 import { Book } from "@/types/book";
 
 const AdminInventory = () => {
-  const { books, loading, error, loadBooks } = useBooks();
+  const { books, loading, error, loadAllBooks, createBook, updateBook, deleteBook } = useAdminBooks(); // MUDEI AQUI
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -47,7 +47,7 @@ const AdminInventory = () => {
   });
 
   useEffect(() => {
-    loadBooks();
+    loadAllBooks(); // MUDEI AQUI
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,8 +69,7 @@ const AdminInventory = () => {
         imageUrl: formData.imageUrl || "/src/assets/book1.jpg",
       };
 
-      // Aqui você integraria com a API real
-      // await bookService.createBook(newBook);
+      await createBook(newBook);
       
       toast({
         title: "Livro adicionado!",
@@ -78,7 +77,6 @@ const AdminInventory = () => {
       });
 
       setIsAddDialogOpen(false);
-      loadBooks(); // Recarrega a lista
       
       // Reset form
       setFormData({
@@ -140,8 +138,7 @@ const AdminInventory = () => {
         imageUrl: editFormData.imageUrl,
       };
 
-      // Aqui você integraria com a API real
-      // await bookService.updateBook(editingBook.id, updatedBook);
+      await updateBook(editingBook.id, updatedBook);
       
       toast({
         title: "Livro atualizado!",
@@ -150,7 +147,6 @@ const AdminInventory = () => {
 
       setIsEditDialogOpen(false);
       setEditingBook(null);
-      loadBooks(); // Recarrega a lista
     } catch (error) {
       toast({
         title: "Erro",
@@ -170,20 +166,38 @@ const AdminInventory = () => {
     }
 
     try {
-      // Aqui você integraria com a API real
-      // await bookService.deleteBook(id);
+      await deleteBook(id);
       
       toast({
         title: "Livro removido",
         description: `${book.title} foi removido do estoque.`,
         variant: "destructive",
       });
-
-      loadBooks(); // Recarrega a lista
     } catch (error) {
       toast({
         title: "Erro",
         description: "Erro ao remover livro",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStockUpdate = async (bookId: string, newStock: number) => {
+    try {
+      const book = books.find(b => b.id === bookId);
+      if (!book) return;
+
+      const updatedBook = { ...book, stock: newStock };
+      await updateBook(bookId, updatedBook);
+      
+      toast({
+        title: "Estoque atualizado!",
+        description: `Estoque de ${book.title} atualizado para ${newStock} unidades.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o estoque.",
         variant: "destructive",
       });
     }
@@ -196,10 +210,26 @@ const AdminInventory = () => {
   );
 
   const totalStock = books.reduce((acc, book) => acc + book.stock, 0);
-  const lowStockCount = books.filter(book => book.stock < 3).length;
+  const lowStockCount = books.filter(book => book.stock < 3 && book.stock > 0).length;
   const outOfStockCount = books.filter(book => book.stock === 0).length;
 
-  if (loading) {
+  // Função para determinar a variante do badge baseado no estoque
+  const getStockBadgeVariant = (stock: number) => {
+    if (stock === 0) return "destructive";
+    if (stock < 3) return "secondary";
+    return "outline";
+  };
+
+  // Função para determinar a variante do badge baseado na condição
+  const getConditionBadgeVariant = (condition: string) => {
+    switch (condition) {
+      case "Ótimo Estado": return "default";
+      case "Novo": return "secondary";
+      default: return "outline";
+    }
+  };
+
+  if (loading && books.length === 0) {
     return (
       <div className="space-y-6">
         <div className="flex justify-center items-center h-64">
@@ -216,7 +246,7 @@ const AdminInventory = () => {
         <div>
           <h2 className="text-2xl font-serif font-bold">Gestão de Estoque</h2>
           <p className="text-sm text-muted-foreground">
-            Cadastre e atualize os livros disponíveis na loja
+            Cadastre e atualize os livros disponíveis na loja - {books.length} livros no total
           </p>
         </div>
         
@@ -600,22 +630,33 @@ const AdminInventory = () => {
                       <td className="py-3 px-4 text-muted-foreground">{book.publisher}</td>
                       <td className="py-3 px-4">
                         <div className="flex justify-center">
-                          <Badge variant={
-                            book.condition === "Ótimo Estado" ? "default" : 
-                            book.condition === "Novo" ? "secondary" : "outline"
-                          }>
+                          <Badge variant={getConditionBadgeVariant(book.condition)}>
                             {book.condition}
                           </Badge>
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex justify-center">
-                          <Badge variant={
-                            book.stock === 0 ? "destructive" :
-                            book.stock < 3 ? "secondary" : "outline"
-                          }>
+                        <div className="flex items-center justify-center gap-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => handleStockUpdate(book.id, Math.max(0, book.stock - 1))}
+                            disabled={book.stock <= 0}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                          <Badge variant={getStockBadgeVariant(book.stock)}>
                             {book.stock} un.
                           </Badge>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => handleStockUpdate(book.id, book.stock + 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right font-semibold">

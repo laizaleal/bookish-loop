@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Filter, Search, X } from "lucide-react";
+import { Filter, Search, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useBooks } from "@/hooks/useBooks";
 
 const Catalog = () => {
@@ -19,26 +19,33 @@ const Catalog = () => {
   const [sortBy, setSortBy] = useState("relevance");
   const [conditionFilter, setConditionFilter] = useState("all");
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [booksPerPage] = useState(12); // 12 livros por página
   
-  const { books, loading, error, searchBooks, loadBooks } = useBooks();
+  const { books, loading, error, searchBooks, loadBooks, pagination } = useBooks();
 
-  // Efeito para carregar livros baseado na busca - CORRIGIDO
+  // Efeito para carregar livros baseado na busca
   useEffect(() => {
     console.log('🔍 useEffect executado, searchQuery:', searchQuery);
     
     if (searchQuery) {
       console.log('📚 Executando busca por:', searchQuery);
-      searchBooks(searchQuery);
+      searchBooks(searchQuery, currentPage, booksPerPage);
     } else {
       console.log('📚 Carregando todos os livros');
-      loadBooks();
+      loadBooks(currentPage, booksPerPage);
     }
-  }, [searchQuery]); // Removidas as dependências desnecessárias
+  }, [searchQuery, currentPage, booksPerPage, searchBooks, loadBooks]);
 
   // Sincroniza o localSearchQuery quando searchQuery muda
   useEffect(() => {
     setLocalSearchQuery(searchQuery);
   }, [searchQuery]);
+
+  // Reset para página 1 quando a busca muda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy, conditionFilter, priceRange]);
 
   // Função para lidar com busca local no catálogo
   const handleLocalSearch = (e: React.FormEvent) => {
@@ -50,6 +57,7 @@ const Catalog = () => {
     } else {
       setSearchParams({});
     }
+    setCurrentPage(1); // Reset para primeira página
   };
 
   // Função para limpar busca
@@ -57,9 +65,10 @@ const Catalog = () => {
     console.log('🧹 Limpando busca');
     setLocalSearchQuery('');
     setSearchParams({});
+    setCurrentPage(1); // Reset para primeira página
   };
 
-  // Filtrar e ordenar livros
+  // Filtrar e ordenar livros (agora apenas os que já estão carregados)
   const filteredAndSortedBooks = books
     .filter(book => {
       // Filtro por condição
@@ -85,9 +94,76 @@ const Catalog = () => {
       }
     });
 
+  // Funções de paginação
+  const totalPages = pagination.totalPages || 1;
+  const totalBooks = pagination.total || books.length;
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    // Scroll para o topo quando mudar de página
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const goToFirstPage = () => {
+    setCurrentPage(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goToLastPage = () => {
+    setCurrentPage(totalPages);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Gerar array de páginas para mostrar na paginação - CORRIGIDO
+  const getPageNumbers = () => {
+    if (totalPages <= 1) return [1];
+    
+    const maxVisiblePages = 5;
+    
+    // Calcular startPage e endPage de forma imutável
+    const calculatedStartPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    const calculatedEndPage = Math.min(totalPages, calculatedStartPage + maxVisiblePages - 1);
+    
+    // Ajustar startPage se endPage estiver no limite
+    const finalStartPage = calculatedEndPage - calculatedStartPage + 1 < maxVisiblePages 
+      ? Math.max(1, calculatedEndPage - maxVisiblePages + 1)
+      : calculatedStartPage;
+    
+    // Gerar array de páginas
+    const pages = [];
+    for (let i = finalStartPage; i <= calculatedEndPage; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  };
+
+  // Calcular índices dos livros sendo mostrados
+  const startIndex = (currentPage - 1) * booksPerPage;
+  const endIndex = Math.min(startIndex + booksPerPage, totalBooks);
+  const showingText = `Mostrando ${startIndex + 1}-${endIndex} de ${totalBooks} livros`;
+
   console.log('📊 Estado atual:', {
     searchQuery,
     localSearchQuery,
+    currentPage,
+    booksPerPage,
+    totalPages,
+    totalBooks,
     booksCount: books.length,
     filteredCount: filteredAndSortedBooks.length,
     loading,
@@ -100,9 +176,12 @@ const Catalog = () => {
         <Navbar />
         <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-center items-center h-64">
-            <p className="text-muted-foreground">
-              {searchQuery ? `Buscando por "${searchQuery}"...` : "Carregando livros..."}
-            </p>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">
+                {searchQuery ? `Buscando por "${searchQuery}"...` : "Carregando livros..."}
+              </p>
+            </div>
           </div>
         </main>
         <Footer />
@@ -116,10 +195,12 @@ const Catalog = () => {
         <Navbar />
         <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-center items-center h-64">
-            <p className="text-destructive">Erro ao carregar livros: {error}</p>
-            <Button onClick={() => window.location.reload()} className="ml-4">
-              Recarregar
-            </Button>
+            <div className="text-center">
+              <p className="text-destructive mb-4">Erro ao carregar livros: {error}</p>
+              <Button onClick={() => window.location.reload()}>
+                Recarregar
+              </Button>
+            </div>
           </div>
         </main>
         <Footer />
@@ -139,8 +220,8 @@ const Catalog = () => {
           </h1>
           <p className="text-muted-foreground">
             {searchQuery 
-              ? `Encontramos ${filteredAndSortedBooks.length} livro(s) para sua busca`
-              : "Explore nossa coleção de livros usados em excelente estado"
+              ? `Encontramos ${totalBooks} livro(s) para sua busca`
+              : `Explore nossa coleção de ${totalBooks} livros usados em excelente estado`
             }
           </p>
         </div>
@@ -222,7 +303,7 @@ const Catalog = () => {
           </div>
 
           <span className="text-sm text-muted-foreground">
-            {filteredAndSortedBooks.length} {filteredAndSortedBooks.length === 1 ? 'livro encontrado' : 'livros encontrados'}
+            Página {currentPage} de {totalPages} • {filteredAndSortedBooks.length} de {totalBooks} livros
           </span>
         </div>
 
@@ -252,6 +333,96 @@ const Catalog = () => {
             <BookCard key={book.id} {...book} />
           ))}
         </div>
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
+            <div className="text-sm text-muted-foreground">
+              {showingText}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {/* Primeira página */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={goToFirstPage}
+                disabled={currentPage === 1}
+                className="h-9 w-9"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+
+              {/* Página anterior */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={goToPrevPage}
+                disabled={currentPage === 1}
+                className="h-9 w-9"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              {/* Números das páginas */}
+              <div className="flex gap-1">
+                {getPageNumbers().map((page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => goToPage(page)}
+                    className="h-9 w-9"
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Próxima página */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="h-9 w-9"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+
+              {/* Última página */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={goToLastPage}
+                disabled={currentPage === totalPages}
+                className="h-9 w-9"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Seletor de página */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Ir para:</span>
+              <Select
+                value={currentPage.toString()}
+                onValueChange={(value) => goToPage(Number(value))}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <SelectItem key={page} value={page.toString()}>
+                      {page}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
 
         {filteredAndSortedBooks.length === 0 && (
           <div className="text-center py-12">
