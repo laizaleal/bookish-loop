@@ -256,7 +256,7 @@ const AdminReports = () => {
         <Card>
           <CardHeader>
             <CardTitle>Livros Mais Vendidos</CardTitle>
-            <CardDescription>Top 5 no período selecionado</CardDescription>
+            <CardDescription>Top 5</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">

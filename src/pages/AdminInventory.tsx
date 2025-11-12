@@ -9,11 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Search, Pencil, Trash2, Package, Save, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useAdminBooks } from "@/hooks/useAdminBooks"; // MUDEI AQUI
+import { useAdminBooks } from "@/hooks/useAdminBooks";
 import { Book } from "@/types/book";
 
 const AdminInventory = () => {
-  const { books, loading, error, loadAllBooks, createBook, updateBook, deleteBook } = useAdminBooks(); // MUDEI AQUI
+  const { books, loading, error, loadAllBooks, createBook, updateBook, deleteBook } = useAdminBooks();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -47,7 +47,7 @@ const AdminInventory = () => {
   });
 
   useEffect(() => {
-    loadAllBooks(); // MUDEI AQUI
+    loadAllBooks();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -608,7 +608,7 @@ const AdminInventory = () => {
               />
             </div>
 
-            {/* Books Table */}
+            {/* Books Table - CORRIGIDO */}
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -618,19 +618,25 @@ const AdminInventory = () => {
                     <th className="text-left py-3 px-4 font-medium">Editora</th>
                     <th className="text-center py-3 px-4 font-medium">Condição</th>
                     <th className="text-center py-3 px-4 font-medium">Estoque</th>
-                    <th className="text-right py-3 px-4 font-medium">Preço</th>
+                    <th className="text-right py-3 px-4 font-medium whitespace-nowrap">Preço (R$)</th>
                     <th className="text-center py-3 px-4 font-medium">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredBooks.map((book) => (
                     <tr key={book.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                      <td className="py-3 px-4 font-medium">{book.title}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{book.author}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{book.publisher}</td>
+                      <td className="py-3 px-4 font-medium max-w-[200px] truncate" title={book.title}>
+                        {book.title}
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground max-w-[150px] truncate" title={book.author}>
+                        {book.author}
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground max-w-[120px] truncate" title={book.publisher}>
+                        {book.publisher}
+                      </td>
                       <td className="py-3 px-4">
                         <div className="flex justify-center">
-                          <Badge variant={getConditionBadgeVariant(book.condition)}>
+                          <Badge variant={getConditionBadgeVariant(book.condition)} className="whitespace-nowrap">
                             {book.condition}
                           </Badge>
                         </div>
@@ -646,7 +652,7 @@ const AdminInventory = () => {
                           >
                             <X className="h-3 w-3" />
                           </Button>
-                          <Badge variant={getStockBadgeVariant(book.stock)}>
+                          <Badge variant={getStockBadgeVariant(book.stock)} className="min-w-[60px] justify-center">
                             {book.stock} un.
                           </Badge>
                           <Button
@@ -659,8 +665,8 @@ const AdminInventory = () => {
                           </Button>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-right font-semibold">
-                        R$ {book.price.toFixed(2)}
+                      <td className="py-3 px-4 text-right font-semibold whitespace-nowrap">
+                        {book.price.toFixed(2)}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex justify-center gap-2">

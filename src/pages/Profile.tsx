@@ -1,5 +1,5 @@
 // src/pages/Profile.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -8,11 +8,71 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Mail, Calendar, Heart, ShoppingCart, BookOpen } from "lucide-react";
+import { useCart } from "@/hooks/useCart";
+import { useFavorites } from "@/hooks/useFavorites";
+import { User, Mail, Calendar, Heart, ShoppingCart, BookOpen, Package, Star } from "lucide-react";
+import { toast } from "sonner";
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const { cart } = useCart();
+  const { favoriteCount } = useFavorites();
   const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: ""
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Inicializar formData quando o usuário carrega
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name,
+        email: user.email
+      });
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      // Usar a função updateUser do hook useAuth
+      await updateUser({
+        name: formData.name,
+        email: formData.email
+      });
+      
+      toast.success("Perfil atualizado com sucesso!");
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast.error("Erro ao atualizar perfil. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (user) {
+      setFormData({
+        name: user.name,
+        email: user.email
+      });
+    }
+    setIsEditing(false);
+  };
+
+  // Calcular estatísticas - CORRIGIDO
+  const cartItemsCount = cart?.items.reduce((total, item) => total + item.quantity, 0) || 0;
+  const cartTotal = cartItemsCount > 0 ? (cart?.total || 0) : 0; // Só mostra total se houver itens
+  
+  // Estatísticas simuladas (em um sistema real, viriam do backend)
+  const booksRead = 0;
+  const reviewsCount = 0;
+  const ordersCount = 0;
 
   if (!user) {
     return (
@@ -70,7 +130,8 @@ const Profile = () => {
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="name"
-                      defaultValue={user.name}
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
                       disabled={!isEditing}
                       className="pl-10"
                     />
@@ -84,7 +145,8 @@ const Profile = () => {
                     <Input
                       id="email"
                       type="email"
-                      defaultValue={user.email}
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
                       disabled={!isEditing}
                       className="pl-10"
                     />
@@ -100,11 +162,19 @@ const Profile = () => {
               <div className="flex gap-3 pt-4">
                 {isEditing ? (
                   <>
-                    <Button onClick={() => setIsEditing(false)} variant="outline">
+                    <Button 
+                      onClick={handleCancel} 
+                      variant="outline"
+                      disabled={isLoading}
+                    >
                       Cancelar
                     </Button>
-                    <Button className="bg-primary hover:bg-primary/90">
-                      Salvar Alterações
+                    <Button 
+                      onClick={handleSave}
+                      className="bg-primary hover:bg-primary/90"
+                      disabled={isLoading || !formData.name.trim() || !formData.email.trim()}
+                    >
+                      {isLoading ? "Salvando..." : "Salvar Alterações"}
                     </Button>
                   </>
                 ) : (
@@ -116,35 +186,89 @@ const Profile = () => {
             </CardContent>
           </Card>
 
-          {/* Estatísticas */}
+          {/* Estatísticas em Tempo Real */}
           <Card>
             <CardHeader>
               <CardTitle>Minha Atividade</CardTitle>
               <CardDescription>
-                Sua atividade na plataforma ReBook
+                Sua atividade atual na plataforma ReBook
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-primary/10 rounded-lg">
-                  <div className="text-2xl font-bold text-primary">{user.favorites.length}</div>
+                  <div className="text-2xl font-bold text-primary">{favoriteCount}</div>
                   <div className="text-sm text-muted-foreground">Favoritos</div>
                 </div>
                 <div className="text-center p-4 bg-accent/10 rounded-lg">
-                  <div className="text-2xl font-bold text-accent">0</div>
-                  <div className="text-sm text-muted-foreground">Pedidos</div>
+                  <div className="text-2xl font-bold text-accent">{cartItemsCount}</div>
+                  <div className="text-sm text-muted-foreground">Itens no Carrinho</div>
                 </div>
                 <div className="text-center p-4 bg-green-100 rounded-lg">
-                  <div className="text-2xl font-bold text-green-700">0</div>
-                  <div className="text-sm text-muted-foreground">Livros Lidos</div>
+                  <div className="text-2xl font-bold text-green-700">
+                    R$ {cartTotal.toFixed(2)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total no Carrinho</div>
                 </div>
                 <div className="text-center p-4 bg-purple-100 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-700">0</div>
-                  <div className="text-sm text-muted-foreground">Avaliações</div>
+                  <div className="text-2xl font-bold text-purple-700">{ordersCount}</div>
+                  <div className="text-sm text-muted-foreground">Pedidos</div>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Carrinho Atual - CORRIGIDO: só mostra se houver itens */}
+          {cartItemsCount > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Meu Carrinho</CardTitle>
+                <CardDescription>
+                  Itens atualmente no seu carrinho de compras
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{cartItemsCount} ite{n(cartItemsCount)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Total: R$ {cartTotal.toFixed(2)}
+                      </p>
+                    </div>
+                    <Link to="/cart">
+                      <Button size="sm">
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        Ver Carrinho
+                      </Button>
+                    </Link>
+                  </div>
+                  
+                  {/* Lista rápida dos itens no carrinho */}
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {cart?.items.slice(0, 3).map((item) => (
+                      <div key={item.id} className="flex items-center gap-3 p-2 bg-secondary/50 rounded-lg">
+                        <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center">
+                          <Package className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{item.book.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.quantity} x R$ {item.book.price.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {cartItemsCount > 3 && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        +{cartItemsCount - 3} mais itens...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Ações Rápidas */}
           <Card>
@@ -161,7 +285,7 @@ const Profile = () => {
                     <Heart className="h-6 w-6" />
                     <span>Meus Favoritos</span>
                     <span className="text-xs text-muted-foreground">
-                      {user.favorites.length} livros
+                      {favoriteCount} livro{favoriteCount !== 1 ? 's' : ''}
                     </span>
                   </Button>
                 </Link>
@@ -181,7 +305,7 @@ const Profile = () => {
                     <ShoppingCart className="h-6 w-6" />
                     <span>Ver Carrinho</span>
                     <span className="text-xs text-muted-foreground">
-                      Meus itens
+                      {cartItemsCount} ite{n(cartItemsCount)}
                     </span>
                   </Button>
                 </Link>
@@ -190,7 +314,7 @@ const Profile = () => {
           </Card>
 
           {/* Favoritos Recentes */}
-          {user.favorites.length > 0 && (
+          {favoriteCount > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>Meus Favoritos</CardTitle>
@@ -201,10 +325,11 @@ const Profile = () => {
               <CardContent>
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Você tem {user.favorites.length} livro(s) nos favoritos
+                    Você tem {favoriteCount} livro{favoriteCount !== 1 ? 's' : ''} nos favoritos
                   </p>
                   <Link to="/favorites">
                     <Button variant="outline" size="sm">
+                      <Heart className="h-4 w-4 mr-2" />
                       Ver Todos os Favoritos
                     </Button>
                   </Link>
@@ -212,6 +337,27 @@ const Profile = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Histórico (Placeholder para futuras implementações) */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico de Atividade</CardTitle>
+              <CardDescription>
+                Sua atividade recente na plataforma
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <Star className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                <p className="text-muted-foreground mb-2">
+                  Em breve: histórico completo de sua atividade
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Visualize seus pedidos, avaliações e muito mais
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
 
@@ -219,5 +365,10 @@ const Profile = () => {
     </div>
   );
 };
+
+// Função helper para pluralização
+function n(count: number): string {
+  return count !== 1 ? 'ns' : 'm';
+}
 
 export default Profile;

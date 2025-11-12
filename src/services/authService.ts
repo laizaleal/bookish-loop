@@ -80,6 +80,27 @@ class AuthService {
     localStorage.setItem('rebook-user', JSON.stringify(user));
   }
 
+  // NOVA FUNÇÃO: updateUser
+  async updateUser(userData: Partial<User>): Promise<User> {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Usuário não autenticado');
+    }
+
+    // Simular chamada API
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const updatedUser: User = {
+      ...currentUser,
+      ...userData
+    };
+
+    this.currentUser = updatedUser;
+    this.saveToLocalStorage(updatedUser);
+    
+    return updatedUser;
+  }
+
   // Métodos para gerenciar favoritos do usuário
   async toggleFavorite(bookId: string): Promise<boolean> {
     const user = this.getCurrentUser();

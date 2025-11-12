@@ -60,6 +60,29 @@ export const useAuth = () => {
     }
   }, []);
 
+  // NOVA FUNÇÃO: updateUser
+  const updateUser = useCallback(async (updatedUserData: Partial<User>): Promise<User> => {
+    if (!user) {
+      throw new Error('Usuário não autenticado');
+    }
+
+    try {
+      setIsLoading(true);
+      // Chamar o serviço para atualizar no backend
+      const updatedUser = await authService.updateUser(updatedUserData);
+      
+      // Atualizar o estado local
+      setUser(updatedUser);
+      
+      return updatedUser;
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
   const toggleFavorite = useCallback(async (bookId: string): Promise<boolean> => {
     if (!isAuthenticated) return false;
     
@@ -98,6 +121,7 @@ export const useAuth = () => {
     login,
     signup,
     logout,
+    updateUser, 
     toggleFavorite,
     getFavorites,
     isFavorite
