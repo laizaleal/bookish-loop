@@ -1,60 +1,19 @@
+// src/pages/Index.tsx
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BookCard from "@/components/BookCard";
 import { Button } from "@/components/ui/button";
-import { Leaf, BookOpen, Users, TrendingUp, ArrowRight, Search, ShoppingCart, Package } from "lucide-react";
+import { Leaf, BookOpen, Users, TrendingUp, ArrowRight } from "lucide-react";
+import { useFeaturedBooks } from "@/hooks/useFeaturedBooks";
 
 import heroImage from "@/assets/fundo-hero.png";
-import book1 from "@/assets/book1.jpg";
-import book2 from "@/assets/book2.jpg";
-import book3 from "@/assets/book3.jpg";
-import book4 from "@/assets/book4.jpg";
-
-const featuredBooks = [
-  {
-    id: "1",
-    title: "O Senhor dos Anéis: A Sociedade do Anel",
-    author: "J.R.R. Tolkien",
-    publisher: "Martins Fontes",
-    price: 45.90,
-    originalPrice: 89.90,
-    condition: "Ótimo Estado",
-    imageUrl: book1,
-  },
-  {
-    id: "2",
-    title: "1984",
-    author: "George Orwell",
-    publisher: "Companhia das Letras",
-    price: 35.90,
-    originalPrice: 59.90,
-    condition: "Bom Estado",
-    imageUrl: book2,
-  },
-  {
-    id: "3",
-    title: "Cem Anos de Solidão",
-    author: "Gabriel García Márquez",
-    publisher: "Record",
-    price: 42.90,
-    originalPrice: 79.90,
-    condition: "Ótimo Estado",
-    imageUrl: book3,
-  },
-  {
-    id: "4",
-    title: "A Menina que Roubava Livros",
-    author: "Markus Zusak",
-    publisher: "Intrínseca",
-    price: 38.90,
-    originalPrice: 64.90,
-    condition: "Ótimo Estado",
-    imageUrl: book4,
-  },
-];
 
 const Index = () => {
+  const { featuredBooks, loading, error } = useFeaturedBooks();
+
+  console.log('🎯 Estado atual:', { featuredBooks, loading, error });
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -163,19 +122,16 @@ const Index = () => {
           <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
             {[
               {
-                icon: Search,
                 step: "1",
                 title: "Encontre seu Livro",
                 description: "Navegue pelo nosso catálogo com milhares de títulos organizados por categoria, autor e editora.",
               },
               {
-                icon: ShoppingCart,
                 step: "2",
                 title: "Adicione ao Carrinho",
                 description: "Escolha os livros desejados, verifique o estado de conservação e finalize sua compra com segurança.",
               },
               {
-                icon: Package,
                 step: "3",
                 title: "Receba em Casa",
                 description: "Seus livros são embalados com cuidado e enviados rapidamente para o conforto da sua casa.",
@@ -188,9 +144,6 @@ const Index = () => {
               >
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm">
                   {step.step}
-                </div>
-                <div className="inline-flex p-5 bg-primary/10 rounded-full mb-6 mt-2">
-                  <step.icon className="h-10 w-10 text-primary" />
                 </div>
                 <h3 className="font-serif font-semibold text-xl mb-3">
                   {step.title}
@@ -233,11 +186,35 @@ const Index = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
-            {featuredBooks.map((book) => (
-              <BookCard key={book.id} {...book} />
-            ))}
-          </div>
+          {error ? (
+            <div className="text-center py-12">
+              <p className="text-destructive">Erro ao carregar livros: {error}</p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="mt-4"
+              >
+                Tentar Novamente
+              </Button>
+            </div>
+          ) : loading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Carregando livros em destaque...</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
+                {featuredBooks.map((book) => (
+                  <BookCard key={book.id} {...book} />
+                ))}
+              </div>
+
+              {featuredBooks.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Nenhum livro em destaque disponível no momento.</p>
+                </div>
+              )}
+            </>
+          )}
 
           <div className="text-center mt-8 sm:hidden">
             <Link to="/catalog">

@@ -1,85 +1,131 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BookCard from "@/components/BookCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Filter } from "lucide-react";
-
-import book1 from "@/assets/book1.jpg";
-import book2 from "@/assets/book2.jpg";
-import book3 from "@/assets/book3.jpg";
-import book4 from "@/assets/book4.jpg";
-import book5 from "@/assets/book5.jpg";
-import book6 from "@/assets/book6.jpg";
-
-const books = [
-  {
-    id: "1",
-    title: "O Senhor dos Anéis: A Sociedade do Anel",
-    author: "J.R.R. Tolkien",
-    publisher: "Martins Fontes",
-    price: 45.90,
-    originalPrice: 89.90,
-    condition: "Ótimo Estado",
-    imageUrl: book1,
-  },
-  {
-    id: "2",
-    title: "1984",
-    author: "George Orwell",
-    publisher: "Companhia das Letras",
-    price: 35.90,
-    originalPrice: 59.90,
-    condition: "Bom Estado",
-    imageUrl: book2,
-  },
-  {
-    id: "3",
-    title: "Cem Anos de Solidão",
-    author: "Gabriel García Márquez",
-    publisher: "Record",
-    price: 42.90,
-    originalPrice: 79.90,
-    condition: "Ótimo Estado",
-    imageUrl: book3,
-  },
-  {
-    id: "4",
-    title: "A Menina que Roubava Livros",
-    author: "Markus Zusak",
-    publisher: "Intrínseca",
-    price: 38.90,
-    originalPrice: 64.90,
-    condition: "Ótimo Estado",
-    imageUrl: book4,
-  },
-  {
-    id: "5",
-    title: "O Pequeno Príncipe",
-    author: "Antoine de Saint-Exupéry",
-    publisher: "Agir",
-    price: 28.90,
-    originalPrice: 49.90,
-    condition: "Bom Estado",
-    imageUrl: book5,
-  },
-  {
-    id: "6",
-    title: "Dom Casmurro",
-    author: "Machado de Assis",
-    publisher: "Penguin Companhia",
-    price: 32.90,
-    originalPrice: 54.90,
-    condition: "Ótimo Estado",
-    imageUrl: book6,
-  },
-];
+import { Filter, Search, X } from "lucide-react";
+import { useBooks } from "@/hooks/useBooks";
 
 const Catalog = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search') || '';
+  
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState("relevance");
+  const [conditionFilter, setConditionFilter] = useState("all");
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  
+  const { books, loading, error, searchBooks, loadBooks } = useBooks();
+
+  // Efeito para carregar livros baseado na busca - CORRIGIDO
+  useEffect(() => {
+    console.log('🔍 useEffect executado, searchQuery:', searchQuery);
+    
+    if (searchQuery) {
+      console.log('📚 Executando busca por:', searchQuery);
+      searchBooks(searchQuery);
+    } else {
+      console.log('📚 Carregando todos os livros');
+      loadBooks();
+    }
+  }, [searchQuery]); // Removidas as dependências desnecessárias
+
+  // Sincroniza o localSearchQuery quando searchQuery muda
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
+
+  // Função para lidar com busca local no catálogo
+  const handleLocalSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('🔍 Busca local submetida:', localSearchQuery);
+    
+    if (localSearchQuery.trim()) {
+      setSearchParams({ search: localSearchQuery.trim() });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  // Função para limpar busca
+  const clearSearch = () => {
+    console.log('🧹 Limpando busca');
+    setLocalSearchQuery('');
+    setSearchParams({});
+  };
+
+  // Filtrar e ordenar livros
+  const filteredAndSortedBooks = books
+    .filter(book => {
+      // Filtro por condição
+      if (conditionFilter === "excellent" && book.condition !== "Ótimo Estado") return false;
+      if (conditionFilter === "good" && book.condition !== "Bom Estado") return false;
+      
+      // Filtro por preço
+      if (book.price < priceRange[0] || book.price > priceRange[1]) return false;
+      
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "price-asc":
+          return a.price - b.price;
+        case "price-desc":
+          return b.price - a.price;
+        case "title":
+          return a.title.localeCompare(b.title);
+        case "relevance":
+        default:
+          return 0;
+      }
+    });
+
+  console.log('📊 Estado atual:', {
+    searchQuery,
+    localSearchQuery,
+    booksCount: books.length,
+    filteredCount: filteredAndSortedBooks.length,
+    loading,
+    error
+  });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-center items-center h-64">
+            <p className="text-muted-foreground">
+              {searchQuery ? `Buscando por "${searchQuery}"...` : "Carregando livros..."}
+            </p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-center items-center h-64">
+            <p className="text-destructive">Erro ao carregar livros: {error}</p>
+            <Button onClick={() => window.location.reload()} className="ml-4">
+              Recarregar
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -88,10 +134,55 @@ const Catalog = () => {
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-4xl font-serif font-bold mb-2">Catálogo de Livros</h1>
+          <h1 className="text-4xl font-serif font-bold mb-2">
+            {searchQuery ? `Resultados para "${searchQuery}"` : "Catálogo de Livros"}
+          </h1>
           <p className="text-muted-foreground">
-            Explore nossa coleção de livros usados em excelente estado
+            {searchQuery 
+              ? `Encontramos ${filteredAndSortedBooks.length} livro(s) para sua busca`
+              : "Explore nossa coleção de livros usados em excelente estado"
+            }
           </p>
+        </div>
+
+        {/* Barra de busca local no catálogo */}
+        <div className="mb-6">
+          <form onSubmit={handleLocalSearch} className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar no catálogo..."
+              value={localSearchQuery}
+              onChange={(e) => setLocalSearchQuery(e.target.value)}
+              className="pl-10 pr-20"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleLocalSearch(e);
+                }
+              }}
+            />
+            <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex gap-1">
+              {localSearchQuery && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSearch}
+                  className="h-7 px-2"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+              <Button
+                type="submit"
+                size="sm"
+                className="h-7 px-3"
+                disabled={!localSearchQuery.trim()}
+              >
+                Buscar
+              </Button>
+            </div>
+          </form>
         </div>
 
         {/* Filters and Sort */}
@@ -106,7 +197,7 @@ const Catalog = () => {
           </Button>
 
           <div className="flex flex-wrap gap-4 items-center">
-            <Select defaultValue="relevance">
+            <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Ordenar por" />
               </SelectTrigger>
@@ -118,7 +209,7 @@ const Catalog = () => {
               </SelectContent>
             </Select>
 
-            <Select defaultValue="all">
+            <Select value={conditionFilter} onValueChange={setConditionFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Condição" />
               </SelectTrigger>
@@ -131,7 +222,7 @@ const Catalog = () => {
           </div>
 
           <span className="text-sm text-muted-foreground">
-            {books.length} livros encontrados
+            {filteredAndSortedBooks.length} {filteredAndSortedBooks.length === 1 ? 'livro encontrado' : 'livros encontrados'}
           </span>
         </div>
 
@@ -157,10 +248,29 @@ const Catalog = () => {
 
         {/* Books Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in">
-          {books.map((book) => (
+          {filteredAndSortedBooks.map((book) => (
             <BookCard key={book.id} {...book} />
           ))}
         </div>
+
+        {filteredAndSortedBooks.length === 0 && (
+          <div className="text-center py-12">
+            {searchQuery ? (
+              <div className="space-y-4">
+                <p className="text-muted-foreground">
+                  Nenhum livro encontrado para "<strong>{searchQuery}</strong>"
+                </p>
+                <Button onClick={clearSearch} variant="outline">
+                  Limpar Busca
+                </Button>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">
+                Nenhum livro encontrado com os filtros selecionados.
+              </p>
+            )}
+          </div>
+        )}
       </main>
 
       <Footer />

@@ -15,83 +15,73 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toast } from "@/hooks/use-toast";
-
-interface CartItem {
-  id: number;
-  title: string;
-  author: string;
-  price: number;
-  quantity: number;
-  image: string;
-  condition: string;
-}
+import { useCart } from "@/hooks/useCart";
+import { useToast } from "@/hooks/use-toast";
 
 const Cart = () => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: 1,
-      title: "O Senhor dos Anéis",
-      author: "J.R.R. Tolkien",
-      price: 45.90,
-      quantity: 1,
-      image: "/src/assets/book1.jpg",
-      condition: "Muito Bom"
-    },
-    {
-      id: 2,
-      title: "1984",
-      author: "George Orwell",
-      price: 32.50,
-      quantity: 2,
-      image: "/src/assets/book2.jpg",
-      condition: "Bom"
-    }
-  ]);
-
+  const { cart, loading, updateQuantity, removeFromCart, clearCart } = useCart();
   const [showCheckout, setShowCheckout] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { toast } = useToast();
 
-  const updateQuantity = (id: number, delta: number) => {
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item
-      )
-    );
+  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
+    try {
+      await updateQuantity(itemId, newQuantity);
+      toast({
+        title: "Carrinho atualizado!",
+        description: "Quantidade alterada com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao atualizar quantidade",
+        variant: "destructive",
+      });
+    }
   };
 
-  const removeItem = (id: number) => {
-    setCartItems(items => items.filter(item => item.id !== id));
-    toast({
-      title: "Item removido",
-      description: "O livro foi removido do carrinho.",
-    });
+  const handleRemoveItem = async (itemId: string) => {
+    try {
+      await removeFromCart(itemId);
+      toast({
+        title: "Item removido",
+        description: "O livro foi removido do carrinho.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao remover item",
+        variant: "destructive",
+      });
+    }
   };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal > 100 ? 0 : 12.90;
-  const total = subtotal + shipping;
 
   const handleCheckout = () => {
     setShowCheckout(true);
   };
 
-  const handlePayment = () => {
-    setShowCheckout(false);
-    setShowSuccess(true);
-    setTimeout(() => {
-      setCartItems([]);
-      setShowSuccess(false);
+  const handlePayment = async () => {
+    try {
+      await clearCart();
+      setShowCheckout(false);
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        toast({
+          title: "Compra finalizada! 🎉",
+          description: "Nota fiscal enviada para seu e-mail.",
+        });
+      }, 3000);
+    } catch (error) {
       toast({
-        title: "Compra finalizada! 🎉",
-        description: "Nota fiscal enviada para seu e-mail.",
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao finalizar compra",
+        variant: "destructive",
       });
-    }, 3000);
+    }
   };
 
-  if (cartItems.length === 0) {
+  if (!cart || cart.items.length === 0) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -121,28 +111,29 @@ const Cart = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {cartItems.map(item => (
+            {cart.items.map(item => (
               <Card key={item.id}>
                 <CardContent className="p-6">
                   <div className="flex gap-6">
                     <img
-                      src={item.image}
-                      alt={item.title}
+                      src={item.book.imageUrl}
+                      alt={item.book.title}
                       className="w-24 h-32 object-cover rounded"
                     />
                     <div className="flex-1">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <h3 className="font-semibold text-lg">{item.title}</h3>
-                          <p className="text-sm text-muted-foreground">{item.author}</p>
+                          <h3 className="font-semibold text-lg">{item.book.title}</h3>
+                          <p className="text-sm text-muted-foreground">{item.book.author}</p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Condição: {item.condition}
+                            Condição: {item.book.condition}
                           </p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => handleRemoveItem(item.id)}
+                          disabled={loading}
                         >
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
@@ -153,7 +144,8 @@ const Cart = () => {
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => updateQuantity(item.id, -1)}
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                            disabled={loading || item.quantity <= 1}
                           >
                             <Minus className="w-4 h-4" />
                           </Button>
@@ -161,13 +153,14 @@ const Cart = () => {
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => updateQuantity(item.id, 1)}
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                            disabled={loading}
                           >
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
                         <p className="text-xl font-bold text-primary">
-                          R$ {(item.price * item.quantity).toFixed(2)}
+                          R$ {(item.book.price * item.quantity).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -185,33 +178,38 @@ const Cart = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} itens)</span>
-                  <span>R$ {subtotal.toFixed(2)}</span>
+                  <span className="text-muted-foreground">Subtotal ({cart.items.reduce((sum, item) => sum + item.quantity, 0)} itens)</span>
+                  <span>R$ {cart.subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Frete</span>
-                  <span>{shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2)}`}</span>
+                  <span>{cart.shipping === 0 ? "Grátis" : `R$ ${cart.shipping.toFixed(2)}`}</span>
                 </div>
-                {shipping === 0 && (
+                {cart.shipping === 0 && (
                   <p className="text-xs text-green-600">
                     🎉 Você ganhou frete grátis!
                   </p>
                 )}
-                {subtotal < 100 && subtotal > 0 && (
+                {cart.subtotal < 100 && cart.subtotal > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Faltam R$ {(100 - subtotal).toFixed(2)} para frete grátis
+                    Faltam R$ {(100 - cart.subtotal).toFixed(2)} para frete grátis
                   </p>
                 )}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span className="text-primary">R$ {total.toFixed(2)}</span>
+                  <span className="text-primary">R$ {cart.total.toFixed(2)}</span>
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" size="lg" onClick={handleCheckout}>
+                <Button 
+                  className="w-full" 
+                  size="lg" 
+                  onClick={handleCheckout}
+                  disabled={loading}
+                >
                   <CreditCard className="w-4 h-4 mr-2" />
-                  Finalizar Compra
+                  {loading ? "Processando..." : "Finalizar Compra"}
                 </Button>
               </CardFooter>
             </Card>
@@ -241,7 +239,7 @@ const Cart = () => {
               <div className="w-48 h-48 bg-gray-900 rounded-lg flex items-center justify-center">
                 <div className="text-white text-center text-xs">
                   <div className="mb-2">QR CODE PIX</div>
-                  <div className="text-2xl font-bold">R$ {total.toFixed(2)}</div>
+                  <div className="text-2xl font-bold">R$ {cart?.total.toFixed(2)}</div>
                 </div>
               </div>
             </div>
@@ -256,8 +254,8 @@ const Cart = () => {
               />
             </div>
 
-            <Button className="w-full" size="lg" onClick={handlePayment}>
-              Confirmar Pagamento
+            <Button className="w-full" size="lg" onClick={handlePayment} disabled={loading}>
+              {loading ? "Processando..." : "Confirmar Pagamento"}
             </Button>
           </div>
         </DialogContent>

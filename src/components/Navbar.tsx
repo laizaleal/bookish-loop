@@ -1,12 +1,36 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+// src/components/Navbar.tsx
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { BookOpen, Search, Heart, ShoppingCart, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useCart } from "@/hooks/useCart";
+import { useFavorites } from "@/hooks/useFavorites";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { getItemCount } = useCart();
+  const { favoriteCount } = useFavorites(); // Removido refreshFavorites daqui
+  const cartItemCount = getItemCount();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Remove o useEffect que causava loop
+  // Os contadores serão atualizados automaticamente pelos hooks
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/catalog?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+      setIsMenuOpen(false);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    handleSearch(e);
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-soft">
@@ -24,7 +48,7 @@ const Navbar = () => {
 
           {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <div className="relative w-full">
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
@@ -33,7 +57,15 @@ const Navbar = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-background border-border"
               />
-            </div>
+              <Button
+                type="submit"
+                size="sm"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 px-3"
+                disabled={!searchQuery.trim()}
+              >
+                Buscar
+              </Button>
+            </form>
           </div>
 
           {/* Desktop Navigation */}
@@ -51,17 +83,21 @@ const Navbar = () => {
             <Link to="/favorites">
               <Button variant="ghost" size="icon" className="relative">
                 <Heart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  0
-                </span>
+                {favoriteCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {favoriteCount > 9 ? '9+' : favoriteCount}
+                  </span>
+                )}
               </Button>
             </Link>
             <Link to="/cart">
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  0
-                </span>
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {cartItemCount > 9 ? '9+' : cartItemCount}
+                  </span>
+                )}
               </Button>
             </Link>
             <Link to="/auth">
@@ -86,7 +122,7 @@ const Navbar = () => {
 
         {/* Mobile Search */}
         <div className="md:hidden pb-4">
-          <div className="relative">
+          <form onSubmit={handleSearchSubmit} className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -95,7 +131,15 @@ const Navbar = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-background border-border"
             />
-          </div>
+            <Button
+              type="submit"
+              size="sm"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 px-3"
+              disabled={!searchQuery.trim()}
+            >
+              Buscar
+            </Button>
+          </form>
         </div>
       </div>
 
@@ -114,15 +158,25 @@ const Navbar = () => {
               </Button>
             </Link>
             <Link to="/favorites" onClick={() => setIsMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start">
+              <Button variant="ghost" className="w-full justify-start relative">
                 <Heart className="h-5 w-5 mr-2" />
-                Favoritos (0)
+                Favoritos
+                {favoriteCount > 0 && (
+                  <span className="absolute right-4 bg-accent text-accent-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {favoriteCount}
+                  </span>
+                )}
               </Button>
             </Link>
             <Link to="/cart" onClick={() => setIsMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start">
+              <Button variant="ghost" className="w-full justify-start relative">
                 <ShoppingCart className="h-5 w-5 mr-2" />
-                Carrinho (0)
+                Carrinho
+                {cartItemCount > 0 && (
+                  <span className="absolute right-4 bg-accent text-accent-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItemCount}
+                  </span>
+                )}
               </Button>
             </Link>
             <div className="pt-3 border-t border-border">
