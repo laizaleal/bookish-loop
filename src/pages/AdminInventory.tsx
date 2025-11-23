@@ -6,14 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Pencil, Trash2, Package, Save, X } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Package, Save, X, MoreVertical, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminBooks } from "@/hooks/useAdminBooks";
 import { Book } from "@/types/book";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const AdminInventory = () => {
-  const { books, loading, error, loadAllBooks, createBook, updateBook, deleteBook } = useAdminBooks();
+  const { books, loading, error, loadAllBooks, createBook, updateBook, deleteBook, resetToInitialData } = useAdminBooks();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -78,7 +84,6 @@ const AdminInventory = () => {
 
       setIsAddDialogOpen(false);
       
-      // Reset form
       setFormData({
         title: "",
         author: "",
@@ -203,6 +208,27 @@ const AdminInventory = () => {
     }
   };
 
+  const handleResetData = async () => {
+    if (!confirm("Tem certeza que deseja resetar todos os dados para os valores iniciais? Esta ação não pode ser desfeita.")) {
+      return;
+    }
+
+    try {
+      await resetToInitialData();
+      
+      toast({
+        title: "Dados resetados!",
+        description: "Todos os dados foram restaurados para os valores iniciais.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao resetar dados",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredBooks = books.filter(book =>
     book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -213,14 +239,12 @@ const AdminInventory = () => {
   const lowStockCount = books.filter(book => book.stock < 3 && book.stock > 0).length;
   const outOfStockCount = books.filter(book => book.stock === 0).length;
 
-  // Função para determinar a variante do badge baseado no estoque
   const getStockBadgeVariant = (stock: number) => {
     if (stock === 0) return "destructive";
     if (stock < 3) return "secondary";
     return "outline";
   };
 
-  // Função para determinar a variante do badge baseado na condição
   const getConditionBadgeVariant = (condition: string) => {
     switch (condition) {
       case "Ótimo Estado": return "default";
@@ -231,7 +255,7 @@ const AdminInventory = () => {
 
   if (loading && books.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-4">
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
@@ -240,162 +264,173 @@ const AdminInventory = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-serif font-bold">Gestão de Estoque</h2>
-          <p className="text-sm text-muted-foreground">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-2xl sm:text-3xl font-serif font-bold">Gestão de Estoque</h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Cadastre e atualize os livros disponíveis na loja - {books.length} livros no total
           </p>
         </div>
         
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Livro
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Adicionar Novo Livro</DialogTitle>
-              <DialogDescription>
-                Preencha as informações do livro para adicioná-lo ao estoque
-              </DialogDescription>
-            </DialogHeader>
-            
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Título *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="author">Autor *</Label>
-                  <Input
-                    id="author"
-                    value={formData.author}
-                    onChange={(e) => setFormData({...formData, author: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="publisher">Editora *</Label>
-                  <Input
-                    id="publisher"
-                    value={formData.publisher}
-                    onChange={(e) => setFormData({...formData, publisher: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="category">Categoria</Label>
-                  <Input
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    placeholder="Fantasia, Ficção, etc."
-                  />
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="isbn">ISBN</Label>
-                  <Input
-                    id="isbn"
-                    value={formData.isbn}
-                    onChange={(e) => setFormData({...formData, isbn: e.target.value})}
-                    placeholder="978-XXXXXXXXXX"
-                  />
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <Button 
+            variant="outline" 
+            onClick={handleResetData}
+            className="w-full sm:w-auto"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Resetar Dados
+          </Button>
+          
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Livro
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Adicionar Novo Livro</DialogTitle>
+                <DialogDescription>
+                  Preencha as informações do livro para adicioná-lo ao estoque
+                </DialogDescription>
+              </DialogHeader>
+              
+              <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Título *</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="author">Autor *</Label>
+                    <Input
+                      id="author"
+                      value={formData.author}
+                      onChange={(e) => setFormData({...formData, author: e.target.value})}
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="imageUrl">URL da Imagem</Label>
-                  <Input
-                    id="imageUrl"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                    placeholder="/src/assets/book.jpg"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="publisher">Editora *</Label>
+                    <Input
+                      id="publisher"
+                      value={formData.publisher}
+                      onChange={(e) => setFormData({...formData, publisher: e.target.value})}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Categoria</Label>
+                    <Input
+                      id="category"
+                      value={formData.category}
+                      onChange={(e) => setFormData({...formData, category: e.target.value})}
+                      placeholder="Fantasia, Ficção, etc."
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="Descrição do livro..."
-                  rows={3}
-                />
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="isbn">ISBN</Label>
+                    <Input
+                      id="isbn"
+                      value={formData.isbn}
+                      onChange={(e) => setFormData({...formData, isbn: e.target.value})}
+                      placeholder="978-XXXXXXXXXX"
+                    />
+                  </div>
 
-              <div className="grid sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Preço (R$) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="stock">Quantidade *</Label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    min="0"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({...formData, stock: e.target.value})}
-                    required
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="imageUrl">URL da Imagem</Label>
+                    <Input
+                      id="imageUrl"
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
+                      placeholder="/src/assets/book.jpg"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="condition">Condição *</Label>
-                  <Select value={formData.condition} onValueChange={(value) => setFormData({...formData, condition: value})}>
-                    <SelectTrigger id="condition">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Ótimo Estado">Ótimo Estado</SelectItem>
-                      <SelectItem value="Bom Estado">Bom Estado</SelectItem>
-                      <SelectItem value="Estado Regular">Estado Regular</SelectItem>
-                      <SelectItem value="Novo">Novo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="description">Descrição</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="Descrição do livro..."
+                    rows={3}
+                  />
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90">
-                  Adicionar ao Estoque
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Preço (R$) *</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.price}
+                      onChange={(e) => setFormData({...formData, price: e.target.value})}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="stock">Quantidade *</Label>
+                    <Input
+                      id="stock"
+                      type="number"
+                      min="0"
+                      value={formData.stock}
+                      onChange={(e) => setFormData({...formData, stock: e.target.value})}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="condition">Condição *</Label>
+                    <Select value={formData.condition} onValueChange={(value) => setFormData({...formData, condition: value})}>
+                      <SelectTrigger id="condition">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Ótimo Estado">Ótimo Estado</SelectItem>
+                        <SelectItem value="Bom Estado">Bom Estado</SelectItem>
+                        <SelectItem value="Estado Regular">Estado Regular</SelectItem>
+                        <SelectItem value="Novo">Novo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto">
+                    Cancelar
+                  </Button>
+                  <Button type="submit" className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+                    Adicionar ao Estoque
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -408,7 +443,7 @@ const AdminInventory = () => {
             </DialogHeader>
             
             <form onSubmit={handleUpdate} className="space-y-4 mt-4">
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-title">Título *</Label>
                   <Input
@@ -430,7 +465,7 @@ const AdminInventory = () => {
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-publisher">Editora *</Label>
                   <Input
@@ -452,7 +487,7 @@ const AdminInventory = () => {
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-isbn">ISBN</Label>
                   <Input
@@ -485,7 +520,7 @@ const AdminInventory = () => {
                 />
               </div>
 
-              <div className="grid sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-price">Preço (R$) *</Label>
                   <Input
@@ -527,11 +562,11 @@ const AdminInventory = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90">
+                <Button type="submit" className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
                   <Save className="h-4 w-4 mr-2" />
                   Salvar Alterações
                 </Button>
@@ -542,56 +577,56 @@ const AdminInventory = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Livros</CardTitle>
             <Package className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{books.length}</div>
+            <div className="text-xl sm:text-2xl font-bold">{books.length}</div>
             <p className="text-xs text-muted-foreground">títulos cadastrados</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Estoque Total</CardTitle>
             <Package className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalStock}</div>
+            <div className="text-xl sm:text-2xl font-bold">{totalStock}</div>
             <p className="text-xs text-muted-foreground">unidades disponíveis</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Estoque Baixo</CardTitle>
             <Package className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{lowStockCount}</div>
+            <div className="text-xl sm:text-2xl font-bold">{lowStockCount}</div>
             <p className="text-xs text-muted-foreground">menos de 3 unidades</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Fora de Estoque</CardTitle>
             <Package className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{outOfStockCount}</div>
+            <div className="text-xl sm:text-2xl font-bold">{outOfStockCount}</div>
             <p className="text-xs text-muted-foreground">sem unidades</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Search */}
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
-          <CardTitle>Livros Cadastrados</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Livros Cadastrados</CardTitle>
           <CardDescription>
             Gerencie o estoque de livros disponíveis - {filteredBooks.length} de {books.length} livros
           </CardDescription>
@@ -608,18 +643,18 @@ const AdminInventory = () => {
               />
             </div>
 
-            {/* Books Table - CORRIGIDO */}
-            <div className="overflow-x-auto">
+            {/* Desktop Table (hidden em mobile) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 font-medium">Título</th>
-                    <th className="text-left py-3 px-4 font-medium">Autor</th>
-                    <th className="text-left py-3 px-4 font-medium">Editora</th>
-                    <th className="text-center py-3 px-4 font-medium">Condição</th>
-                    <th className="text-center py-3 px-4 font-medium">Estoque</th>
-                    <th className="text-right py-3 px-4 font-medium whitespace-nowrap">Preço (R$)</th>
-                    <th className="text-center py-3 px-4 font-medium">Ações</th>
+                    <th className="text-left py-3 px-4 font-medium text-sm">Título</th>
+                    <th className="text-left py-3 px-4 font-medium text-sm">Autor</th>
+                    <th className="text-left py-3 px-4 font-medium text-sm">Editora</th>
+                    <th className="text-center py-3 px-4 font-medium text-sm">Condição</th>
+                    <th className="text-center py-3 px-4 font-medium text-sm">Estoque</th>
+                    <th className="text-right py-3 px-4 font-medium text-sm">Preço</th>
+                    <th className="text-center py-3 px-4 font-medium text-sm">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -690,14 +725,97 @@ const AdminInventory = () => {
                   ))}
                 </tbody>
               </table>
-              
-              {filteredBooks.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhum livro encontrado</p>
-                </div>
-              )}
             </div>
+
+            {/* Mobile Cards (visible apenas em mobile) */}
+            <div className="md:hidden space-y-4">
+              {filteredBooks.map((book) => (
+                <Card key={book.id} className="p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm truncate" title={book.title}>
+                        {book.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground truncate" title={book.author}>
+                        {book.author}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate" title={book.publisher}>
+                        {book.publisher}
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(book)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDelete(book.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground text-xs">Condição:</span>
+                      <div className="mt-1">
+                        <Badge variant={getConditionBadgeVariant(book.condition)} className="text-xs">
+                          {book.condition}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <span className="text-muted-foreground text-xs">Preço:</span>
+                      <div className="font-semibold text-primary">R$ {book.price.toFixed(2)}</div>
+                    </div>
+
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground text-xs">Estoque:</span>
+                      <div className="flex items-center justify-between mt-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => handleStockUpdate(book.id, Math.max(0, book.stock - 1))}
+                          disabled={book.stock <= 0}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                        <Badge variant={getStockBadgeVariant(book.stock)} className="min-w-[60px] justify-center">
+                          {book.stock} un.
+                        </Badge>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => handleStockUpdate(book.id, book.stock + 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            
+            {filteredBooks.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum livro encontrado</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
