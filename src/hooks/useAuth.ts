@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, LoginData, SignupData } from '../types/auth';
 import { authService } from '../services/authService';
+import { authEvents } from '../utils/authEvents';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -31,6 +32,7 @@ export const useAuth = () => {
       const user = await authService.login(loginData);
       setUser(user);
       setIsAuthenticated(true);
+      authEvents.emit(); // Emitir evento após login
       return user;
     } finally {
       setIsLoading(false);
@@ -43,6 +45,7 @@ export const useAuth = () => {
       const user = await authService.signup(signupData);
       setUser(user);
       setIsAuthenticated(true);
+      authEvents.emit(); // Emitir evento após signup
       return user;
     } finally {
       setIsLoading(false);
@@ -55,6 +58,7 @@ export const useAuth = () => {
       await authService.logout();
       setUser(null);
       setIsAuthenticated(false);
+      authEvents.emit(); // Emitir evento após logout
     } finally {
       setIsLoading(false);
     }
@@ -73,6 +77,7 @@ export const useAuth = () => {
       
       // Atualizar o estado local
       setUser(updatedUser);
+      authEvents.emit(); // Emitir evento após atualização
       
       return updatedUser;
     } catch (error) {
@@ -98,6 +103,7 @@ export const useAuth = () => {
           ...user,
           favorites: updatedFavorites
         });
+        authEvents.emit(); // Emitir evento após toggle favorite
       }
       return isNowFavorite;
     } catch (error) {

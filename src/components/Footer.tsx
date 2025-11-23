@@ -1,16 +1,25 @@
+// src/components/Footer.tsx
 import { Link } from "react-router-dom";
 import { BookOpen, Mail, Phone, MapPin, Facebook, Instagram, Twitter } from "lucide-react";
 import { toast } from "sonner";
+import { useAnchorNavigation } from "@/hooks/useAnchorNavigation";
 
 const Footer = () => {
+  const { handleAnchorClick } = useAnchorNavigation();
+  
   const handleDevelopmentAlert = (pageName: string) => {
     toast.info(`${pageName} em desenvolvimento`);
+  };
+
+  const handleComoFuncionaClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleAnchorClick('#como-funciona');
   };
 
   return (
     <footer className="bg-card border-t border-border mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
@@ -54,16 +63,9 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                {/* Link para Como Funciona com navegação inteligente */}
                 <button 
-                  onClick={() => handleDevelopmentAlert("Sobre Nós")}
-                  className="text-muted-foreground hover:text-primary transition-colors text-sm"
-                >
-                  Sobre Nós
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleDevelopmentAlert("Como Funciona")}
+                  onClick={handleComoFuncionaClick}
                   className="text-muted-foreground hover:text-primary transition-colors text-sm"
                 >
                   Como Funciona
@@ -75,45 +77,6 @@ const Footer = () => {
                   className="text-muted-foreground hover:text-primary transition-colors text-sm"
                 >
                   Sustentabilidade
-                </button>
-              </li>
-            </ul>
-          </div>
-
-          {/* Atendimento */}
-          <div>
-            <h3 className="font-serif font-semibold mb-4">Atendimento</h3>
-            <ul className="space-y-2">
-              <li>
-                <button 
-                  onClick={() => handleDevelopmentAlert("Perguntas Frequentes")}
-                  className="text-muted-foreground hover:text-primary transition-colors text-sm"
-                >
-                  Perguntas Frequentes
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleDevelopmentAlert("Frete e Entrega")}
-                  className="text-muted-foreground hover:text-primary transition-colors text-sm"
-                >
-                  Frete e Entrega
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleDevelopmentAlert("Trocas e Devoluções")}
-                  className="text-muted-foreground hover:text-primary transition-colors text-sm"
-                >
-                  Trocas e Devoluções
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleDevelopmentAlert("Contato")}
-                  className="text-muted-foreground hover:text-primary transition-colors text-sm"
-                >
-                  Contato
                 </button>
               </li>
             </ul>

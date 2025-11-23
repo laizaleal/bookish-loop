@@ -4,18 +4,66 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BookCard from "@/components/BookCard";
 import { Button } from "@/components/ui/button";
-import { Leaf, BookOpen, Users, TrendingUp, ArrowRight } from "lucide-react";
+import { Leaf, BookOpen, Users, TrendingUp, ArrowRight, CheckCircle } from "lucide-react";
 import { useFeaturedBooks } from "@/hooks/useFeaturedBooks";
+import { useAnchorNavigation } from "@/hooks/useAnchorNavigation";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { authEvents } from "@/utils/authEvents";
 
 import heroImage from "@/assets/fundo-hero.png";
 
 const Index = () => {
   const { featuredBooks, loading, error } = useFeaturedBooks();
+  const { handleAnchorClick } = useAnchorNavigation();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  
+  // Estado para forçar re-render
+  const [renderKey, setRenderKey] = useState(0);
 
-  console.log('🎯 Estado atual:', { featuredBooks, loading, error });
+  // Escutar eventos de autenticação
+  useEffect(() => {
+    const unsubscribe = authEvents.subscribe(() => {
+      console.log('🔐 Evento de autenticação recebido, forçando re-render');
+      setRenderKey(prev => prev + 1);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  console.log('🎯 Estado atual:', { 
+    featuredBooks, 
+    loading, 
+    error, 
+    isAuthenticated, 
+    user,
+    authLoading,
+    renderKey
+  });
+
+  const handleComoFuncionaClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleAnchorClick('#como-funciona');
+  };
+
+  // Se ainda está carregando a autenticação, mostra um loading sutil
+  if (authLoading) {
+    return (
+      <div className="min-h-screen">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" key={renderKey}>
       <Navbar />
 
       {/* Hero Section */}
@@ -42,11 +90,11 @@ const Index = () => {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <a href="#como-funciona">
+              <button onClick={handleComoFuncionaClick}>
                 <Button size="lg" variant="outline" className="text-lg px-8 bg-card/50 backdrop-blur-sm">
                   Como Funciona
                 </Button>
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -227,24 +275,55 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-secondary/30">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center animate-fade-in">
-          <div className="bg-card rounded-2xl p-8 md:p-12 shadow-soft">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
-              Pronto para começar sua jornada literária sustentável?
-            </h2>
-            <p className="text-muted-foreground mb-8 text-lg">
-              Crie sua conta e ganhe 10% de desconto na primeira compra
-            </p>
-            <Link to="/auth">
-              <Button size="lg" className="bg-accent hover:bg-accent/90 text-lg px-8">
-                Criar Conta Grátis
-              </Button>
-            </Link>
+      {/* CTA Section - ATUALIZADA */}
+      {!isAuthenticated ? (
+        <section className="py-20 bg-secondary/30">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center animate-fade-in">
+            <div className="bg-card rounded-2xl p-8 md:p-12 shadow-soft">
+              <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
+                Pronto para começar sua jornada literária sustentável?
+              </h2>
+              <p className="text-muted-foreground mb-8 text-lg">
+                Crie sua conta e ganhe 10% de desconto na primeira compra
+              </p>
+              <Link to="/auth">
+                <Button size="lg" className="bg-accent hover:bg-accent/90 text-lg px-8">
+                  Criar Conta Grátis
+                </Button>
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="py-20 bg-secondary/30">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center animate-fade-in">
+            <div className="bg-card rounded-2xl p-8 md:p-12 shadow-soft">
+              <div className="flex justify-center mb-4">
+                <CheckCircle className="h-12 w-12 text-green-500" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
+                Bem-vindo de volta, {user?.name || 'leitor'}!
+              </h2>
+              <p className="text-muted-foreground mb-8 text-lg">
+                Continue explorando nossa coleção de livros incríveis
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link to="/catalog">
+                  <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8">
+                    Continuar Comprando
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <Link to="/profile">
+                  <Button size="lg" variant="outline" className="text-lg px-8">
+                    Meu Perfil
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <Footer />
     </div>

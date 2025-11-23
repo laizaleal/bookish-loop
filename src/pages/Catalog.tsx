@@ -18,11 +18,39 @@ const Catalog = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState("relevance");
   const [conditionFilter, setConditionFilter] = useState("all");
+  const [genreFilter, setGenreFilter] = useState("all");
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [currentPage, setCurrentPage] = useState(1);
-  const [booksPerPage] = useState(12); // 12 livros por página
+  const [booksPerPage] = useState(12);
   
   const { books, loading, error, searchBooks, loadBooks, pagination } = useBooks();
+
+  const availableGenres = [
+    "Todos",
+    "Fantasia",
+    "Ficção Científica",
+    "Literatura Clássica",
+    "Drama",
+    "Infantil",
+    "Literatura Brasileira",
+    "Romance",
+    "Fábula / Política",
+    "História / Não-Ficção",
+    "Suspense / Mistério",
+    "Fantasia Épica",
+    "Terror / Gótico",
+    "Ficção Espiritual",
+    "Mistério / Policial",
+    "Ficção Existencial",
+    "Drama Social",
+    "Autoajuda / Desenvolvimento Pessoal",
+    "Aventura / Clássico",
+    "Romance Gótico",
+    "Filosofia / Ficção",
+    "Romance Histórico / Mistério",
+    "Clássico / Drama",
+    "Terror"
+  ];
 
   // Efeito para carregar livros baseado na busca
   useEffect(() => {
@@ -42,10 +70,10 @@ const Catalog = () => {
     setLocalSearchQuery(searchQuery);
   }, [searchQuery]);
 
-  // Reset para página 1 quando a busca muda
+  // Reset para página 1 quando os filtros mudam
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, sortBy, conditionFilter, priceRange]);
+  }, [searchQuery, sortBy, conditionFilter, genreFilter, priceRange]);
 
   // Função para lidar com busca local no catálogo
   const handleLocalSearch = (e: React.FormEvent) => {
@@ -57,7 +85,7 @@ const Catalog = () => {
     } else {
       setSearchParams({});
     }
-    setCurrentPage(1); // Reset para primeira página
+    setCurrentPage(1);
   };
 
   // Função para limpar busca
@@ -65,15 +93,27 @@ const Catalog = () => {
     console.log('🧹 Limpando busca');
     setLocalSearchQuery('');
     setSearchParams({});
-    setCurrentPage(1); // Reset para primeira página
+    setCurrentPage(1);
   };
 
-  // Filtrar e ordenar livros (agora apenas os que já estão carregados)
+  // Função para limpar todos os filtros
+  const clearAllFilters = () => {
+    setConditionFilter("all");
+    setGenreFilter("all");
+    setPriceRange([0, 100]);
+    setSortBy("relevance");
+    setCurrentPage(1);
+  };
+
+  // Filtrar e ordenar livros
   const filteredAndSortedBooks = books
     .filter(book => {
       // Filtro por condição
       if (conditionFilter === "excellent" && book.condition !== "Ótimo Estado") return false;
       if (conditionFilter === "good" && book.condition !== "Bom Estado") return false;
+      
+      // Filtro por gênero
+      if (genreFilter !== "all" && book.category !== genreFilter) return false;
       
       // Filtro por preço
       if (book.price < priceRange[0] || book.price > priceRange[1]) return false;
@@ -100,7 +140,6 @@ const Catalog = () => {
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
-    // Scroll para o topo quando mudar de página
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -128,22 +167,17 @@ const Catalog = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Gerar array de páginas para mostrar na paginação - CORRIGIDO
+  // Gerar array de páginas para mostrar na paginação
   const getPageNumbers = () => {
     if (totalPages <= 1) return [1];
     
     const maxVisiblePages = 5;
-    
-    // Calcular startPage e endPage de forma imutável
     const calculatedStartPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     const calculatedEndPage = Math.min(totalPages, calculatedStartPage + maxVisiblePages - 1);
-    
-    // Ajustar startPage se endPage estiver no limite
     const finalStartPage = calculatedEndPage - calculatedStartPage + 1 < maxVisiblePages 
       ? Math.max(1, calculatedEndPage - maxVisiblePages + 1)
       : calculatedStartPage;
     
-    // Gerar array de páginas
     const pages = [];
     for (let i = finalStartPage; i <= calculatedEndPage; i++) {
       pages.push(i);
@@ -157,6 +191,9 @@ const Catalog = () => {
   const endIndex = Math.min(startIndex + booksPerPage, totalBooks);
   const showingText = `Mostrando ${startIndex + 1}-${endIndex} de ${totalBooks} livros`;
 
+  // Verificar se há filtros ativos
+  const hasActiveFilters = conditionFilter !== "all" || genreFilter !== "all" || priceRange[0] > 0 || priceRange[1] < 100;
+
   console.log('📊 Estado atual:', {
     searchQuery,
     localSearchQuery,
@@ -166,6 +203,9 @@ const Catalog = () => {
     totalBooks,
     booksCount: books.length,
     filteredCount: filteredAndSortedBooks.length,
+    genreFilter,
+    conditionFilter,
+    priceRange,
     loading,
     error
   });
@@ -266,18 +306,45 @@ const Catalog = () => {
           </form>
         </div>
 
-        {/* Filters and Sort */}
-        <div className="mb-8 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center animate-slide-up">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="sm:hidden"
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
+        {/* Filters and Sort - LAYOUT CORRIGIDO */}
+        <div className="mb-8 flex flex-col gap-4 animate-slide-up">
+          {/* Primeira linha: Botões móveis e info */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="sm:hidden"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filtros
+                {hasActiveFilters && (
+                  <span className="ml-2 bg-primary text-primary-foreground rounded-full h-5 w-5 text-xs flex items-center justify-center">
+                    !
+                  </span>
+                )}
+              </Button>
 
-          <div className="flex flex-wrap gap-4 items-center">
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="text-muted-foreground"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Limpar Filtros
+                </Button>
+              )}
+            </div>
+
+            <span className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages} • {filteredAndSortedBooks.length} de {totalBooks} livros
+            </span>
+          </div>
+
+          {/* Segunda linha: Filtros desktop */}
+          <div className="hidden sm:flex flex-wrap gap-4 items-center">
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Ordenar por" />
@@ -300,28 +367,127 @@ const Catalog = () => {
                 <SelectItem value="good">Bom Estado</SelectItem>
               </SelectContent>
             </Select>
-          </div>
 
-          <span className="text-sm text-muted-foreground">
-            Página {currentPage} de {totalPages} • {filteredAndSortedBooks.length} de {totalBooks} livros
-          </span>
+            {/* Novo Filtro por Gênero */}
+            <Select value={genreFilter} onValueChange={setGenreFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Gênero" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Gêneros</SelectItem>
+                {availableGenres
+                  .filter(genre => genre !== "Todos")
+                  .map((genre) => (
+                    <SelectItem key={genre} value={genre}>
+                      {genre}
+                    </SelectItem>
+                  ))
+                }
+              </SelectContent>
+            </Select>
+
+            {/* Filtro de Preço no Desktop */}
+            <div className="flex items-center gap-4 ml-4">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Preço:</span>
+              <div className="w-32">
+                <Slider
+                  value={priceRange}
+                  onValueChange={setPriceRange}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                />
+              </div>
+              <div className="text-sm text-muted-foreground whitespace-nowrap">
+                R$ {priceRange[0]} - R$ {priceRange[1]}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Filters Sidebar - Mobile */}
         {showFilters && (
           <div className="sm:hidden mb-6 p-4 bg-card rounded-lg border border-border animate-slide-up">
-            <h3 className="font-semibold mb-4">Faixa de Preço</h3>
-            <div className="space-y-4">
-              <Slider
-                value={priceRange}
-                onValueChange={setPriceRange}
-                max={100}
-                step={5}
-                className="w-full"
-              />
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>R$ {priceRange[0]}</span>
-                <span>R$ {priceRange[1]}</span>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold">Filtros</h3>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="text-muted-foreground"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Limpar
+                </Button>
+              )}
+            </div>
+            
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-medium mb-3">Ordenar por</h4>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="relevance">Relevância</SelectItem>
+                    <SelectItem value="price-asc">Menor Preço</SelectItem>
+                    <SelectItem value="price-desc">Maior Preço</SelectItem>
+                    <SelectItem value="title">Título A-Z</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-3">Condição</h4>
+                <Select value={conditionFilter} onValueChange={setConditionFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Condição" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="excellent">Ótimo Estado</SelectItem>
+                    <SelectItem value="good">Bom Estado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-3">Gênero</h4>
+                <Select value={genreFilter} onValueChange={setGenreFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um gênero" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Gêneros</SelectItem>
+                    {availableGenres
+                      .filter(genre => genre !== "Todos")
+                      .map((genre) => (
+                        <SelectItem key={genre} value={genre}>
+                          {genre}
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-3">Faixa de Preço</h4>
+                <div className="space-y-4">
+                  <Slider
+                    value={priceRange}
+                    onValueChange={setPriceRange}
+                    max={100}
+                    step={5}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>R$ {priceRange[0]}</span>
+                    <span>R$ {priceRange[1]}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -426,18 +592,32 @@ const Catalog = () => {
 
         {filteredAndSortedBooks.length === 0 && (
           <div className="text-center py-12">
-            {searchQuery ? (
+            {searchQuery || hasActiveFilters ? (
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  Nenhum livro encontrado para "<strong>{searchQuery}</strong>"
+                  {searchQuery && hasActiveFilters 
+                    ? `Nenhum livro encontrado para "${searchQuery}" com os filtros selecionados.`
+                    : searchQuery 
+                    ? `Nenhum livro encontrado para "${searchQuery}"`
+                    : "Nenhum livro encontrado com os filtros selecionados."
+                  }
                 </p>
-                <Button onClick={clearSearch} variant="outline">
-                  Limpar Busca
-                </Button>
+                <div className="flex gap-2 justify-center">
+                  {(searchQuery || hasActiveFilters) && (
+                    <Button onClick={clearAllFilters} variant="outline">
+                      Limpar Filtros
+                    </Button>
+                  )}
+                  {searchQuery && (
+                    <Button onClick={clearSearch}>
+                      Limpar Busca
+                    </Button>
+                  )}
+                </div>
               </div>
             ) : (
               <p className="text-muted-foreground">
-                Nenhum livro encontrado com os filtros selecionados.
+                Nenhum livro disponível no momento.
               </p>
             )}
           </div>
