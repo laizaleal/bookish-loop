@@ -1,4 +1,4 @@
-// src/pages/Favorites.tsx (SIMPLIFICADO)
+// src/pages/Favorites.tsx
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -34,6 +34,21 @@ const Favorites = () => {
     }
   };
 
+  // 🔥 ESCUTA ATUALIZAÇÕES DE FAVORITOS
+  useEffect(() => {
+    const handleFavoritesUpdate = () => {
+      console.log('📢 Evento de favoritos recebido na página Favorites');
+      loadFavorites();
+    };
+
+    window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
+    
+    return () => {
+      window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
+    };
+  }, []);
+
+  // Carrega favoritos inicialmente
   useEffect(() => {
     loadFavorites();
   }, []);
@@ -44,7 +59,10 @@ const Favorites = () => {
         <Navbar />
         <main className="flex-1 container mx-auto px-4 py-12">
           <div className="flex justify-center items-center h-64">
-            <p className="text-muted-foreground">Carregando favoritos...</p>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando seus favoritos...</p>
+            </div>
           </div>
         </main>
         <Footer />
@@ -97,6 +115,15 @@ const Favorites = () => {
             <BookCard key={book.id} {...book} />
           ))}
         </div>
+
+        {/* Mensagem quando não há livros após filtragem (caso necessário) */}
+        {favoriteBooks.length === 0 && favoriteCount > 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">
+              Nenhum livro encontrado nos favoritos com os filtros atuais.
+            </p>
+          </div>
+        )}
       </main>
       <Footer />
     </div>

@@ -1,4 +1,4 @@
-// src/components/BookCard.tsx
+// src/components/BookCard.tsx (ATUALIZADO)
 import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -29,32 +29,49 @@ const BookCard = ({
   condition,
   imageUrl,
 }: BookCardProps) => {
-  const { addToCart } = useCart();
-  const { toggleFavorite, isFavorite } = useFavorites(); // JÁ ESTÁ CORRETO
+  const { addToCart, getItemCount } = useCart();
+  const { toggleFavorite, isFavorite, favoriteBooks } = useFavorites(); // 🔥 Adicionado favoriteBooks
   const { toast } = useToast();
   const [isBookFavorite, setIsBookFavorite] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
 
-  // Verifica se o livro é favorito ao carregar o componente
+  // Verifica se o livro é favorito - AGORA MAIS RÁPIDO
   useEffect(() => {
-    const checkFavoriteStatus = async () => {
+    // Primeiro verifica no estado local para resposta imediata
+    const localFavorite = favoriteBooks.includes(id);
+    setIsBookFavorite(localFavorite);
+    
+    // Depois confirma com a função async
+    const confirmFavoriteStatus = async () => {
       try {
-        const favorite = await isFavorite(id);
-        setIsBookFavorite(favorite);
+        const confirmedFavorite = await isFavorite(id);
+        if (confirmedFavorite !== localFavorite) {
+          setIsBookFavorite(confirmedFavorite);
+        }
       } catch (error) {
-        console.error('Erro ao verificar favorito:', error);
+        console.error('Erro ao confirmar favorito:', error);
       }
     };
+    
+    confirmFavoriteStatus();
+  }, [id, isFavorite, favoriteBooks]); // 🔥 Adicionado favoriteBooks na dependência
 
-    checkFavoriteStatus();
-  }, [id, isFavorite]);
+  // Atualiza contador do carrinho
+  useEffect(() => {
+    setCartItemCount(getItemCount());
+  }, [getItemCount]);
 
   const handleAddToCart = async () => {
     try {
       setIsLoading(true);
       await addToCart(id, 1);
+      
+      // Atualiza contador local imediatamente para feedback visual
+      setCartItemCount(prev => prev + 1);
+      
       toast({
-        title: "Adicionado ao carrinho!",
+        title: "Adicionado ao carrinho! 🛒",
         description: `${title} foi adicionado ao seu carrinho.`,
       });
     } catch (error) {
@@ -71,16 +88,28 @@ const BookCard = ({
   const handleToggleFavorite = async () => {
     try {
       setIsLoading(true);
-      const newFavoriteStatus = await toggleFavorite(id);
+      
+      // Atualiza estado local IMEDIATAMENTE para feedback visual instantâneo
+      const newFavoriteStatus = !isBookFavorite;
       setIsBookFavorite(newFavoriteStatus);
       
+      // Depois faz a chamada async
+      const confirmedStatus = await toggleFavorite(id);
+      
+      // Se houver discrepância, corrige
+      if (confirmedStatus !== newFavoriteStatus) {
+        setIsBookFavorite(confirmedStatus);
+      }
+      
       toast({
-        title: newFavoriteStatus ? "Adicionado aos favoritos! 💖" : "Removido dos favoritos",
-        description: newFavoriteStatus 
+        title: confirmedStatus ? "Adicionado aos favoritos! 💖" : "Removido dos favoritos",
+        description: confirmedStatus 
           ? `${title} foi adicionado aos seus favoritos.`
           : `${title} foi removido dos seus favoritos.`,
       });
     } catch (error) {
+      // Reverte em caso de erro
+      setIsBookFavorite(!isBookFavorite);
       toast({
         title: "Erro",
         description: "Erro ao atualizar favoritos",
@@ -102,8 +131,10 @@ const BookCard = ({
         <Button
           size="icon"
           variant="secondary"
-          className={`absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-card/90 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground ${
-            isBookFavorite ? "!opacity-100 !bg-red-500/20 !text-red-500" : ""
+          className={`absolute top-3 right-3 transition-all duration-300 bg-card/90 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground ${
+            isBookFavorite 
+              ? "!opacity-100 !bg-red-500/20 !text-red-500" 
+              : "opacity-0 group-hover:opacity-100"
           }`}
           onClick={handleToggleFavorite}
           disabled={isLoading}
@@ -140,7 +171,7 @@ const BookCard = ({
         </div>
         <Button 
           size="icon" 
-          className="bg-accent hover:bg-accent/90"
+          className="bg-accent hover:bg-accent/90 relative"
           onClick={handleAddToCart}
           disabled={isLoading}
         >

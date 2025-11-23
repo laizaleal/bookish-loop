@@ -1,5 +1,5 @@
 // src/components/Navbar.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { BookOpen, Search, Heart, ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,24 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { getItemCount } = useCart();
-  const { favoriteCount } = useFavorites();
+  const { favoriteCount, refreshFavorites } = useFavorites();
   const { user, isAuthenticated, logout } = useAuth();
   const cartItemCount = getItemCount();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // 🔥 ESCUTA ATUALIZAÇÕES DE FAVORITOS
+  useEffect(() => {
+    const handleFavoritesUpdate = () => {
+      refreshFavorites();
+    };
+
+    window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
+    
+    return () => {
+      window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
+    };
+  }, [refreshFavorites]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

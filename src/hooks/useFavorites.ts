@@ -1,73 +1,108 @@
-// src/hooks/useFavorites.ts (ATUALIZADO)
+// src/hooks/useFavorites.ts (CORRIGIDO)
 import { useState, useEffect, useCallback } from 'react';
 import { favoriteService } from '../services/favoriteService';
 import { useAuth } from './useAuth';
 
+// Criar um evento customizado para notificar mudanças nos favoritos
+const FAVORITES_UPDATED_EVENT = 'favoritesUpdated';
+
 export const useFavorites = () => {
   const [favoriteCount, setFavoriteCount] = useState(0);
+  const [favoriteBooks, setFavoriteBooks] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated, toggleFavorite: authToggleFavorite, isFavorite: authIsFavorite } = useAuth();
+  const { isAuthenticated } = useAuth();
 
-  const loadFavoriteCount = useCallback(async () => {
+  // Função para carregar favoritos
+  const loadFavorites = useCallback(async () => {
     try {
-      if (isAuthenticated) {
-        // Se autenticado, usar o sistema de autenticação
-        const favorites = await authIsFavorite('dummy'); // Chamada dummy para verificar
-        // Para contagem, ainda usar o serviço local por enquanto
-        const count = await favoriteService.getFavoriteCount();
-        setFavoriteCount(count);
-      } else {
-        // Se não autenticado, usar o sistema local
-        const count = await favoriteService.getFavoriteCount();
-        setFavoriteCount(count);
-      }
+      console.log('🔄 useFavorites: Carregando favoritos...');
+      
+      // SEMPRE usa o sistema local para simplificar
+      const [favorites, count] = await Promise.all([
+        favoriteService.getFavorites(),
+        favoriteService.getFavoriteCount()
+      ]);
+      
+      console.log('✅ useFavorites: Favoritos carregados:', favorites.length, 'livros');
+      setFavoriteBooks(favorites);
+      setFavoriteCount(count);
     } catch (error) {
-      console.error('Erro ao carregar contador de favoritos:', error);
+      console.error('❌ useFavorites: Erro ao carregar favoritos:', error);
     }
-  }, [isAuthenticated, authIsFavorite]);
+  }, []);
+
+  // Função para disparar evento de atualização
+  const notifyFavoritesUpdate = useCallback(() => {
+    console.log('📢 useFavorites: Disparando evento favoritesUpdated');
+    window.dispatchEvent(new CustomEvent(FAVORITES_UPDATED_EVENT));
+  }, []);
 
   const toggleFavorite = useCallback(async (bookId: string): Promise<boolean> => {
     try {
       setLoading(true);
+      console.log('🔄 useFavorites: Alternando favorito para livro:', bookId);
       
-      let isNowFavorite: boolean;
+      // SEMPRE usa o sistema local
+      const isNowFavorite = await favoriteService.toggleFavorite(bookId);
       
-      if (isAuthenticated) {
-        // Usar sistema de autenticação
-        isNowFavorite = await authToggleFavorite(bookId);
+      console.log('✅ useFavorites: Favorito alternado. Novo estado:', isNowFavorite);
+      
+      // Atualiza estado local imediatamente para resposta rápida
+      if (isNowFavorite) {
+        setFavoriteBooks(prev => [...prev, bookId]);
+        setFavoriteCount(prev => prev + 1);
       } else {
-        // Usar sistema local
-        isNowFavorite = await favoriteService.toggleFavorite(bookId);
+        setFavoriteBooks(prev => prev.filter(id => id !== bookId));
+        setFavoriteCount(prev => prev - 1);
       }
       
-      await loadFavoriteCount();
+      // Notifica TODOS os componentes
+      notifyFavoritesUpdate();
+      
       return isNowFavorite;
     } catch (error) {
-      console.error('Erro ao alternar favorito:', error);
+      console.error('❌ useFavorites: Erro ao alternar favorito:', error);
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, authToggleFavorite, loadFavoriteCount]);
+  }, [notifyFavoritesUpdate]);
 
   const isFavorite = useCallback(async (bookId: string): Promise<boolean> => {
-    if (isAuthenticated) {
-      return await authIsFavorite(bookId);
-    } else {
-      return await favoriteService.isFavorite(bookId);
+    // Verifica primeiro no estado local para resposta imediata
+    if (favoriteBooks.includes(bookId)) {
+      return true;
     }
-  }, [isAuthenticated, authIsFavorite]);
+    
+    // Depois confirma com o serviço
+    return await favoriteService.isFavorite(bookId);
+  }, [favoriteBooks]);
 
-  // Carrega o contador apenas uma vez no início
+  // Carrega os favoritos no início
   useEffect(() => {
-    loadFavoriteCount();
-  }, [loadFavoriteCount]);
+    loadFavorites();
+  }, [loadFavorites]);
+
+  // Escuta atualizações de favoritos de outros componentes
+  useEffect(() => {
+    const handleFavoritesUpdate = () => {
+      console.log('📢 useFavorites: Evento recebido, recarregando favoritos...');
+      loadFavorites();
+    };
+
+    window.addEventListener(FAVORITES_UPDATED_EVENT, handleFavoritesUpdate);
+    
+    return () => {
+      window.removeEventListener(FAVORITES_UPDATED_EVENT, handleFavoritesUpdate);
+    };
+  }, [loadFavorites]);
 
   return {
     favoriteCount,
+    favoriteBooks,
     loading,
     toggleFavorite,
     isFavorite,
-    refreshFavorites: loadFavoriteCount
+    refreshFavorites: loadFavorites
   };
 };
