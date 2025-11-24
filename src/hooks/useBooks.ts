@@ -16,6 +16,27 @@ export const useBooks = () => {
     totalPages: 0
   });
 
+  // 🔥 NOVO: Recarregar livros quando estoque mudar
+  const reloadBooks = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await bookService.getAllBooks(1, 12);
+      setBooks(response.items);
+      setPagination({
+        total: response.total,
+        page: response.page,
+        limit: response.limit,
+        totalPages: response.totalPages
+      });
+      console.log('🔄 Livros recarregados devido a atualização de estoque');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar livros';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // useCallback para evitar recriação da função
   const loadBooks = useCallback(async (page: number = 1, limit: number = 12) => {
     try {
@@ -176,6 +197,20 @@ export const useBooks = () => {
     }
   };
 
+  // 🔥 ESCUTA ATUALIZAÇÕES DE ESTOQUE
+  useEffect(() => {
+    const handleStockUpdate = () => {
+      console.log('📢 useBooks: Estoque atualizado, recarregando livros...');
+      reloadBooks();
+    };
+
+    window.addEventListener('stockUpdated', handleStockUpdate);
+    
+    return () => {
+      window.removeEventListener('stockUpdated', handleStockUpdate);
+    };
+  }, [reloadBooks]);
+
   // Carrega os livros apenas uma vez no início (com paginação normal)
   useEffect(() => {
     loadBooks();
@@ -193,6 +228,7 @@ export const useBooks = () => {
     getBookById,
     createBook,
     updateBook,
-    deleteBook
+    deleteBook,
+    refreshBooks: reloadBooks // 🔥 AGORA USA reloadBooks
   };
 };

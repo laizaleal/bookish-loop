@@ -5,6 +5,7 @@ import { cartService } from '../services/cartService';
 
 // Criar um evento customizado para notificar mudanças no carrinho
 const CART_UPDATED_EVENT = 'cartUpdated';
+const STOCK_UPDATED_EVENT = 'stockUpdated'; // 🔥 NOVO EVENTO
 
 export const useCart = () => {
   const [cart, setCart] = useState<Cart | null>(null);
@@ -30,6 +31,11 @@ export const useCart = () => {
   // Função para disparar evento de atualização
   const notifyCartUpdate = useCallback(() => {
     window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+  }, []);
+
+  // 🔥 NOVA FUNÇÃO: Disparar evento de atualização de estoque
+  const notifyStockUpdate = useCallback(() => {
+    window.dispatchEvent(new CustomEvent(STOCK_UPDATED_EVENT));
   }, []);
 
   // Adicionar ao carrinho
@@ -104,6 +110,31 @@ export const useCart = () => {
     }
   }, [notifyCartUpdate]);
 
+  // 🔥 NOVA FUNÇÃO: Finalizar compra
+  const finalizePurchase = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Finalizando compra e atualizando estoque...');
+      
+      const result = await cartService.finalizePurchase();
+      
+      setCart(result.cart);
+      notifyCartUpdate(); // Notifica atualização do carrinho
+      notifyStockUpdate(); // 🔥 Notifica atualização do estoque
+      
+      console.log('✅ Compra finalizada com sucesso! Pedido:', result.orderId);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao finalizar compra';
+      setError(errorMessage);
+      console.error('❌ Erro ao finalizar compra:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [notifyCartUpdate, notifyStockUpdate]);
+
   // Obter contagem de itens
   const getItemCount = useCallback(() => {
     if (!cart) return 0;
@@ -136,6 +167,7 @@ export const useCart = () => {
     updateQuantity,
     removeFromCart,
     clearCart,
+    finalizePurchase, // 🔥 NOVA FUNÇÃO
     getItemCount,
     refreshCart: loadCart
   };

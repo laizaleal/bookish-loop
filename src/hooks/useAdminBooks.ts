@@ -1,4 +1,4 @@
-// src/hooks/useAdminBooks.ts
+// src/hooks/useAdminBooks.ts (CORRIGIDO)
 import { useState, useEffect, useCallback } from 'react';
 import { Book } from '../types/book';
 import { books as initialBooks } from '../data/mockData';
@@ -59,6 +59,20 @@ export const useAdminBooks = () => {
       setLoading(false);
     }
   }, [loadBooksFromStorage]);
+
+  // 🔥 ESCUTA ATUALIZAÇÕES DE ESTOQUE - CORRIGIDO
+  useEffect(() => {
+    const handleStockUpdate = () => {
+      console.log('📢 useAdminBooks: Estoque atualizado, recarregando livros...');
+      loadAllBooks();
+    };
+
+    window.addEventListener('stockUpdated', handleStockUpdate);
+    
+    return () => {
+      window.removeEventListener('stockUpdated', handleStockUpdate);
+    };
+  }, []); // 🔥 REMOVIDA A DEPENDÊNCIA loadAllBooks
 
   // Funções de administração
   const createBook = async (book: Book): Promise<Book> => {
